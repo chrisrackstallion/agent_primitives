@@ -1,0 +1,118 @@
+---
+name: tagging-intent
+description: >-
+  Tag the RSpec example that proves an intent clause with intent: metadata, and
+  judge whether an evaluation actually proves its clause. Use when writing,
+  moving, merging, or deleting a spec in an app with a docs/primitives/ tree, or
+  when deciding which examples a clause needs.
+---
+
+# Intent Tags
+
+**Announce:** "I'm using the tagging-intent skill."
+
+## Tagging the Intent a Spec Proves
+
+When the app has a **`docs/primitives/`** tree, the example that proves an intent
+clause carries the clause id as RSpec metadata:
+
+```ruby
+it "shows replies nested under their parent", intent: "comment_threads#I2" do
+```
+
+The capability is the doc's filename without `.md`
+(`primitives-format`). One example can carry several
+clauses as a list — `intent: %w[comment_threads#I2 comment_threads#I3]` — and a
+clause proven by four examples is tagged on all four.
+
+- **On the example, never on the group.** A tag on a `describe`, `context`, or
+  `shared_examples` is an offence — an intent-tag lint cop, where the app has
+  one, at lint time, `tag/misplaced` from `agent_primitives evals`. A group tag
+  can lie: delete
+  the example it stood for and its siblings keep the group green, so the clause
+  still claims a proof that no longer exists.
+- **Only evaluation examples are tagged.** Most specs prove behaviour without
+  proving a *clause*; those stay untagged. Tagging everything makes the map
+  useless.
+- The capability doc's `evaluations:` must list the spec file, and the file must
+  carry the tag. **`agent_primitives evals`** checks both directions and fails when either
+  side drifts.
+- **Tagging all four is a rule, not a check.** `evals` counts files: one tag makes
+  the whole file a carrier, so a clause meant to be proven by four denials goes
+  green with three tagged, and `guard` says nothing either — an untagged new
+  example is growth. **`agent_primitives proofs '<capability>#I<n>'`** is what
+  shows the fourth: it lists the tagged examples behind the clause, per
+  evaluation file. Read the listing against the plan's **Intent impact** entry,
+  which names the cases — a case the entry names that is missing from the listing
+  is found in the spec file and tagged, or written. Nothing it prints is an
+  offence — most examples in a spec file are untagged by design.
+- **`agent_primitives proofs --since <the ref the task started from>`**
+  (`HEAD` while the task is uncommitted) prints one counted line per
+  clause a change touched, which is what a task's verify step runs before
+  reporting — a count that comes up short is drilled into by naming the clause.
+- The tag is also a selector — `bundle exec rspec --tag 'intent:comment_threads#I2'`
+  runs exactly the proof.
+
+Metadata rather than a comment for that reason: renaming an example cannot break
+the link, and deleting it breaks the link loudly.
+
+## What counts as proving a clause
+
+`agent_primitives evals` only checks a tag is well-formed — clause exists,
+example carries the tag. Whether the example **proves** the clause is judgment.
+The test:
+
+> **An evaluation proves a clause when breaking the clause turns it red.**
+
+If the behaviour could regress while the tagged example still passes, the tag
+is decoration and the clause is unproven behind a green run.
+
+Three ways a tag fails that test:
+
+1. **It asserts the affordance, not the outcome.** The form renders, the button
+   is on the page, the request came back `200` — strip the behaviour out and the
+   example still passes. Assert the outcome the clause names.
+2. **It proves one case, not the quantifier.** Clause sentences carry scope —
+   *any*, *every*, *never*, *only*, *at most*. A happy path proves the
+   existential case only. "Never nests deeper than three" is unproven until
+   something tries for four.
+3. **It proves the clause at a layer that cannot hold it.** Denials, role
+   matrices, and boundaries have owners in the app's testing conventions for
+   which spec layer owns a behaviour. Bolting "and the other user cannot" onto a
+   canonical journey gives the journey a second story *and* still leaves the
+   matrix uncovered.
+
+So a clause often needs **more than one evaluation, across more than one
+layer** — that is normal, not duplication:
+
+```ruby
+# Clause: articles#I3 — Only the author can edit an article.
+
+# bad — tagged, green, and half the clause is untested. Nothing here would
+# go red if every reader could suddenly edit.
+# spec/system/articles_spec.rb
+it "lets the author edit their article", intent: "articles#I3" do
+
+# good — the permission and the denial, each at the layer that owns it
+# spec/policies/article_policy_spec.rb
+it "denies edit to a reader who is not the author", intent: "articles#I3" do
+# spec/requests/articles_spec.rb
+it "redirects a non-author away from edit", intent: "articles#I3" do
+```
+
+`evaluations:` on that clause then lists both files. A clause whose evaluations
+all sit in one happy-path example, when its wording claims a universal or a
+denial, is a finding at review — not a passing row.
+
+**Sufficient as a set, necessary individually.** The red test asks whether the
+evaluations are *enough*; the inverse question is **could you delete this
+evaluation and still have the clause fully proven?** If yes, it is padding, and
+the tag comes off.
+
+Past about three evaluations, suspect the clause rather than the coverage — a
+sentence needing four separate proofs is usually two promises wearing one id
+(`primitives-format` § Size discipline).
+
+A clause that **no** spec could falsify is not a clause at all: it is a Shape
+bullet, or an aspiration. Send it back rather than tagging something adjacent to
+it (`primitives-format` § Intent clauses).

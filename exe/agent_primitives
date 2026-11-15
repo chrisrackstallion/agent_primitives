@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Load-path require, as RubyGems and Bundler arrange: run from a checkout with
+# `ruby -Ilib exe/agent_primitives` or `bundle exec`.
+require "agent_primitives/cli"
+
+exit AgentPrimitives::CLI.new(ARGV).run
