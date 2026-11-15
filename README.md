@@ -12,7 +12,7 @@ The primitives tree is the `docs/primitives/` directory. It contains the capabil
 - `guard` reports what a change did to the intent clauses and to the examples that prove them.
 - `proofs` lists the tagged examples that prove each intent clause.
 
-Nine skills tell your agent when to read, write and check the primitives tree, from planning to review. The `import` command copies these skills into the skills directory of your agent.
+Ten skills tell your agent when to read, write and check the primitives tree, from planning to review. The `import` command copies these skills into the skills directory of your agent.
 
 What you get:
 
